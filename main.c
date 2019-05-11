@@ -4,6 +4,7 @@
 #define GL_GLEXT_PROTOTYPES 1
 #define GL3_PROTOTYPES 1
 #include <GLFW/glfw3.h>
+#include "linmath.h"
 
 void error_callback(int error, const char* description)
 {
@@ -17,20 +18,21 @@ GLuint vertex_buffer, vertex_shader, fragment_shader, program, vao;
 GLint mvp_location, vpos_location, vcol_location, test_location;
 
 float vertices[] = {
-  -1.0f, -1.0f, 1.0f,
-  -1.0f,  1.0f, 1.0f,
-  1.0f,  -1.0f, 1.0f,
+  -1.0f,  -1.0f, 1.0f,
+  -1.0f,   1.0f, 1.0f,
+   1.0f,  -1.0f, 1.0f,
 
-  1.0f, -1.0f, 1.0f,
+   1.0f, -1.0f, 1.0f,
   -1.0f,  1.0f, 1.0f,
-  1.0f,  1.0f, 1.0f,
+   1.0f,  1.0f, 1.0f,
 };
 
 static const char* vertex_shader_text =
 "#version 330 core \n\
 in vec3 vPos; \n\
+uniform mat4 MVP; \n\
 void main() { \n\
-   gl_Position = vec4(vPos, 1.0); \n\
+   gl_Position = MVP * vec4(vPos, 1.0); \n\
 }\n";
 
 static const char* fragment_shader_text = 
@@ -82,20 +84,25 @@ int main() {
 void loop(GLFWwindow* window) {
   float ratio;
   int width, height;
+  mat4x4 m, p, t, mvp;
 
   glfwGetFramebufferSize(window, &width, &height);
   ratio = width / (float)height;
 
   glViewport(0, 0, width, height);
   glClear(GL_COLOR_BUFFER_BIT);
-  //glClearColor(1.0f, 1.0f, 0.0f, 1.0f);
 
-  //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  mat4x4_identity(m);
+  mat4x4_rotate_Z(m, m, (float)glfwGetTime());
+  mat4x4_ortho(p, -ratio, ratio, -1.0f, 1.0f, 1.0f, -1.0f);
+  mat4x4_translate(t, 0, 0, -0.5f);
+  mat4x4_mul(mvp, p, m);
+  mat4x4_mul(mvp, t, mvp);
+  glUniformMatrix4fv(mvp_location, 1, GL_FALSE, (const GLfloat*) mvp);
+
   glUseProgram(program);
-
   glBindVertexArray(vao);
   glDrawArrays(GL_TRIANGLES, 0, 6);
-  printf("OpenGL err: %i\n", glGetError());
 }
 
 void GL_Setup() {
@@ -116,10 +123,11 @@ void GL_Setup() {
   glLinkProgram(program);
 
   vpos_location = glGetAttribLocation(program, "vPos");
+  mvp_location = glGetUniformLocation(program, "MVP");
   printf("vPos location: %i\n", vpos_location);
+  printf("MVPs location: %i\n", mvp_location);
 
   glEnableVertexAttribArray(vpos_location);
-  printf("OpenGL err: %i\n", glGetError());
   glVertexAttribPointer(
       vpos_location,
       3, // elements per vertex
@@ -127,7 +135,9 @@ void GL_Setup() {
       GL_FALSE, // normalized
       0,
       (void*)(sizeof(float) * 0));
-  printf("OpenGL err: %i\n", glGetError());
+
+  GLint err = glGetError();
+  if (err != 0) printf("ERROR CODE: %i\n", err);
 }
 
 GLint CompileShader(GLint type, const GLchar* const* source)
