@@ -2,7 +2,7 @@ CXXFLAGS=-Oz -fno-stack-protector -ffunction-sections -fdata-sections -Wl,--gc-s
 
 .PHONY: app
 app: main.c
-	cc `pkg-config --cflags glfw3` -o app main.c `pkg-config --static --libs glfw3 gl`
+	g++ `pkg-config --cflags glfw3` -o app main.c `pkg-config --static --libs glfw3 gl`
 	strip -S \
 	  --strip-unneeded \
 	  --remove-section=.note.gnu.gold-version \
@@ -13,3 +13,6 @@ app: main.c
 .PHONY: clean
 clean:
 	rm app 
+
+run:
+	make && ./app

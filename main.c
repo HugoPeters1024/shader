@@ -5,17 +5,18 @@
 #define GL3_PROTOTYPES 1
 #include <GLFW/glfw3.h>
 #include "linmath.h"
+#include "shader.h"
 
 void error_callback(int error, const char* description)
 {
     fprintf(stderr, "Error: %s\n", description); }
 
-void loop();
+void loop(GLFWwindow* window);
 void GL_Setup();
-GLint CompileShader();
 
 GLuint vertex_buffer, vertex_shader, fragment_shader, program, vao;
 GLint mvp_location, vpos_location, vcol_location, test_location;
+DefaultShader shader;
 
 float vertices[] = {
   -1.0f,  -1.0f, 1.0f,
@@ -100,7 +101,7 @@ void loop(GLFWwindow* window) {
   mat4x4_mul(mvp, t, mvp);
   glUniformMatrix4fv(mvp_location, 1, GL_FALSE, (const GLfloat*) mvp);
 
-  glUseProgram(program);
+  shader.Bind();
   glBindVertexArray(vao);
   glDrawArrays(GL_TRIANGLES, 0, 6);
 }
@@ -114,18 +115,7 @@ void GL_Setup() {
 
   glBindVertexArray(vao);
 
-  vertex_shader = CompileShader(GL_VERTEX_SHADER, &vertex_shader_text);
-  fragment_shader = CompileShader(GL_FRAGMENT_SHADER, &fragment_shader_text);
-
-  program = glCreateProgram();
-  glAttachShader(program, vertex_shader);
-  glAttachShader(program, fragment_shader);
-  glLinkProgram(program);
-
-  vpos_location = glGetAttribLocation(program, "vPos");
-  mvp_location = glGetUniformLocation(program, "MVP");
-  printf("vPos location: %i\n", vpos_location);
-  printf("MVPs location: %i\n", mvp_location);
+  shader.Init();
 
   glEnableVertexAttribArray(vpos_location);
   glVertexAttribPointer(
@@ -138,35 +128,4 @@ void GL_Setup() {
 
   GLint err = glGetError();
   if (err != 0) printf("ERROR CODE: %i\n", err);
-}
-
-GLint CompileShader(GLint type, const GLchar* const* source)
-{
-  GLint shader = glCreateShader(type);
-  glShaderSource(shader, 1, source, NULL);
-  glCompileShader(shader);
-
-  // Check the compilation of the shader 
-  GLint success = 0;
-  glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-  printf("Shader Compilation:\t\t");
-  if (success) printf("success\n"); else printf("failed\n");
-  if (success == GL_FALSE)
-  {
-    GLint maxLength = 0;
-    glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
-
-    GLchar* errorLog = malloc(maxLength);
-    glGetShaderInfoLog(shader, maxLength, &maxLength, errorLog);
-
-    printf("%s", errorLog);
-
-    free(errorLog);
-    //glDeleteShader(shader);
-
-    abort();
-    return -1;
-  }
-
-  return shader;
 }
