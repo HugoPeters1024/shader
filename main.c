@@ -6,17 +6,16 @@
 #include <GLFW/glfw3.h>
 #include "linmath.h"
 #include "shader.h"
+#include "vertexbuf.h"
 
 void error_callback(int error, const char* description)
 {
     fprintf(stderr, "Error: %s\n", description); }
 
 void loop(GLFWwindow* window);
-void GL_Setup();
 
-GLuint vertex_buffer, vertex_shader, fragment_shader, program, vao;
-GLint mvp_location, vpos_location, vcol_location, test_location;
 DefaultShader shader;
+VertexBuffer quad;
 
 float vertices[] = {
   -1.0f,  -1.0f, 1.0f,
@@ -27,22 +26,6 @@ float vertices[] = {
   -1.0f,  1.0f, 1.0f,
    1.0f,  1.0f, 1.0f,
 };
-
-static const char* vertex_shader_text =
-"#version 330 core \n\
-in vec3 vPos; \n\
-uniform mat4 MVP; \n\
-void main() { \n\
-   gl_Position = MVP * vec4(vPos, 1.0); \n\
-}\n";
-
-static const char* fragment_shader_text = 
-"#version 330 core \n\
-out vec3 color; \n\
-void main(){ \n\
-  color = vec3(1, 0, 0); \n\
-}\n";
-
 
 int main() {
   printf("Hello World\n");
@@ -66,7 +49,9 @@ int main() {
   //Enable vsync
   glfwSwapInterval(1);
 
-  GL_Setup();
+  //Setup shaders and vertex buffers
+  shader.Init();
+  quad.Init(std::begin(vertices), std::end(vertices));
 
 
   while(!glfwWindowShouldClose(window)) 
@@ -99,33 +84,16 @@ void loop(GLFWwindow* window) {
   mat4x4_translate(t, 0, 0, -0.5f);
   mat4x4_mul(mvp, p, m);
   mat4x4_mul(mvp, t, mvp);
-  glUniformMatrix4fv(mvp_location, 1, GL_FALSE, (const GLfloat*) mvp);
+  shader.Bind(mvp);
 
-  shader.Bind();
-  glBindVertexArray(vao);
-  glDrawArrays(GL_TRIANGLES, 0, 6);
-}
+  quad.Draw();
 
-void GL_Setup() {
-  glGenBuffers(1, &vertex_buffer);
-  glGenVertexArrays(1, &vao);
-
-  glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-  glBindVertexArray(vao);
-
-  shader.Init();
-
-  glEnableVertexAttribArray(vpos_location);
-  glVertexAttribPointer(
-      vpos_location,
-      3, // elements per vertex
-      GL_FLOAT,
-      GL_FALSE, // normalized
-      0,
-      (void*)(sizeof(float) * 0));
-
-  GLint err = glGetError();
-  if (err != 0) printf("ERROR CODE: %i\n", err);
+  mat4x4_identity(m);
+  mat4x4_rotate_Z(m, m, (float)glfwGetTime() * 2);
+  mat4x4_ortho(p, -ratio, ratio, -1.0f, 1.0f, 1.0f, -1.0f);
+  mat4x4_translate(t, 0, 0, -0.5f);
+  mat4x4_mul(mvp, p, m);
+  mat4x4_mul(mvp, t, mvp);
+  shader.Bind(mvp);
+  quad.Draw();
 }

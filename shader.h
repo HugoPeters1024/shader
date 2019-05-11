@@ -68,19 +68,27 @@ struct DefaultShader : Program {
     vPos = glGetAttribLocation(program, "vPos");
     MVP  = glGetUniformLocation(program, "MVP");
   }
+
+  void Bind(mat4x4 M) {
+    Program::Bind();
+    glUniformMatrix4fv(MVP, 1, GL_FALSE, (const GLfloat*) M);
+  }
 };
 
-const char* DefaultShader::vs =
-"#version 330 core \n\
-in vec3 vPos; \n\
-uniform mat4 MVP; \n\
-void main() { \n\
-   gl_Position = MVP * vec4(vPos, 1.0); \n\
-}\n";
+const char* DefaultShader::vs = R"(
+#version 330 core
+layout(location = 0) in vec3 vPos;
+out vec3 fPos;
+uniform mat4 MVP; 
+void main() {
+   gl_Position = MVP * vec4(vPos, 1.0);
+   fPos = gl_Position.xyz;
+})";
 
-const char* DefaultShader::fs =
-"#version 330 core \n\
-out vec3 color; \n\
-void main(){ \n\
-  color = vec3(1, 0, 0); \n\
-}\n";
+const char* DefaultShader::fs = R"(
+#version 330 core
+in vec3 fPos;
+out vec3 color;
+void main(){
+  color = vec3(1, 0, 0);
+})";
