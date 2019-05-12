@@ -78,17 +78,21 @@ struct DefaultShader : Program {
 const char* DefaultShader::vs = R"(
 #version 330 core
 layout(location = 0) in vec3 vPos;
-out vec3 fPos;
+layout(location = 1) in vec3 vNormal;
+out vec3 fColor;
 uniform mat4 MVP; 
 void main() {
-   gl_Position = MVP * vec4(vPos, 1.0);
-   fPos = gl_Position.xyz;
+   vec3 lightDir = vec3(1, 0, 0);
+   vec3 normal = (MVP * vec4(vNormal, 1)).xyz;
+   float theta = abs(dot(normal, lightDir));
+   gl_Position = 0.00001f * MVP * vec4(vPos, 1.0);
+   fColor = vec3(1) * (theta + 0.2f);
 })";
 
 const char* DefaultShader::fs = R"(
 #version 330 core
-in vec3 fPos;
+in vec3 fColor;
 out vec3 color;
 void main(){
-  color = vec3(1, 0, 0);
+  color = fColor;
 })";

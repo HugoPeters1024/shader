@@ -16,6 +16,7 @@ void loop(GLFWwindow* window);
 
 DefaultShader shader;
 VertexBuffer quad;
+VertexMesh mesh;
 
 float vertices[] = {
   -1.0f,  -1.0f, 1.0f,
@@ -51,7 +52,10 @@ int main() {
 
   //Setup shaders and vertex buffers
   shader.Init();
-  quad.Init(std::begin(vertices), std::end(vertices));
+  //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  quad.Init(std::begin(vertices), std::end(vertices), GL_TRIANGLES);
+  mesh.Init(8, 8);
+
 
 
   while(!glfwWindowShouldClose(window)) 
@@ -70,7 +74,7 @@ int main() {
 void loop(GLFWwindow* window) {
   float ratio;
   int width, height;
-  mat4x4 m, p, t, mvp;
+  mat4x4 m, p, t, s, mvp;
 
   glfwGetFramebufferSize(window, &width, &height);
   ratio = width / (float)height;
@@ -79,21 +83,13 @@ void loop(GLFWwindow* window) {
   glClear(GL_COLOR_BUFFER_BIT);
 
   mat4x4_identity(m);
-  mat4x4_rotate_Z(m, m, (float)glfwGetTime());
+  mat4x4_rotate_Y(m, m, (float)glfwGetTime() / 4.0f);
   mat4x4_ortho(p, -ratio, ratio, -1.0f, 1.0f, 1.0f, -1.0f);
   mat4x4_translate(t, 0, 0, -0.5f);
+
   mat4x4_mul(mvp, p, m);
   mat4x4_mul(mvp, t, mvp);
   shader.Bind(mvp);
-
-  quad.Draw();
-
-  mat4x4_identity(m);
-  mat4x4_rotate_Z(m, m, (float)glfwGetTime() * 2);
-  mat4x4_ortho(p, -ratio, ratio, -1.0f, 1.0f, 1.0f, -1.0f);
-  mat4x4_translate(t, 0, 0, -0.5f);
-  mat4x4_mul(mvp, p, m);
-  mat4x4_mul(mvp, t, mvp);
-  shader.Bind(mvp);
-  quad.Draw();
+  //quad.Draw();
+  mesh.Draw();
 }
