@@ -1,69 +1,22 @@
 #include <stdexcept>
 
-struct VertexBuffer {
-  GLint draw_mode;
-  GLuint buffer;
-  size_t buf_size;
+struct VertexMesh {
+  uint w, h;
+  VertexMesh() {}
+  size_t vertexCount;
+  GLuint vertexBuffer;
+  GLuint normalBuffer;
   GLuint vao;
-  bool initialized = false;
-
-  VertexBuffer() {}
-  void Init(float* vertices_begin, float* vertices_end, GLint draw_mode) {
-    this->draw_mode = draw_mode;
-
-    buf_size = vertices_end - vertices_begin;
-    glGenBuffers(1, &buffer); 
-    glGenVertexArrays(1, &vao);
-
-    glBindBuffer(GL_ARRAY_BUFFER, buffer);
-    glBufferData(GL_ARRAY_BUFFER, buf_size * sizeof(float), vertices_begin, GL_STATIC_DRAW);
-
-    glBindVertexArray(vao);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(
-        0,
-        3, // elements per vertex
-        GL_FLOAT,
-        GL_FALSE, // normalized
-        0,
-        (void*)(sizeof(float) * 0));
-    initialized = true;
-  }
-
-  int AddBuffer(GLint attrib, float* buf_begin, float* buf_end) {
-    GLuint buf;
-    size_t size = buf_end - buf_begin;
-    if (size != buf_size)
-      printf("Secondary buffer not the same as vertex buffer: %i/%i\n", size, buf_size);
-    glGenBuffers(1, &buf);
-    glBindBuffer(GL_ARRAY_BUFFER, buf);
-    glBufferData(GL_ARRAY_BUFFER, size * sizeof(float), buf_begin, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(attrib);
-    glVertexAttribPointer(
-        attrib,
-        3, // elements per vertex
-        GL_FLOAT,
-        GL_FALSE, // normalized
-        0,
-        (void*)(sizeof(float) * 0));
-  }
 
   void Draw() {
-    if (!initialized)
-      throw std::invalid_argument("Initialize vertex buffer first");
     glBindVertexArray(vao);
-    glDrawArrays(draw_mode, 0, this->buf_size);
+    glDrawArrays(GL_TRIANGLES, 0, vertexCount);
   }
-};
-
-struct VertexMesh : VertexBuffer {
-  uint w, h;
-  VertexMesh() : VertexBuffer() {}
-  GLuint normalsBuffer;
 
   void Init(uint w, uint h) {
-    float* grid = (float*)malloc(sizeof(float) * w * h * 18);
-    float* normals = (float*)malloc(sizeof(float) * w * h * 18);
+    vertexCount = w * h * 18;
+    float* grid = (float*)malloc(sizeof(float) * vertexCount);
+    float* normals = (float*)malloc(sizeof(float) * vertexCount);
     float* height = (float*)malloc(sizeof(float) * (w+1) * (h+1));
     for(int i=0; i<(w+1)*(h+1); i++) {
       height[i] = static_cast<float> (rand()) / static_cast<float>(RAND_MAX) * 0.1f;
@@ -99,7 +52,7 @@ struct VertexMesh : VertexBuffer {
         q+=18;
       }
 
-    for(int i=0; i<w*h*18; i+=9) {
+    for(int i=0; i<vertexCount; i+=9) {
       vec3 p1 = { grid[i+0], grid[i+1], grid[i+2] }; 
       vec3 p2 = { grid[i+3], grid[i+4], grid[i+5] }; 
       vec3 p3 = { grid[i+6], grid[i+7], grid[i+8] }; 
@@ -122,8 +75,43 @@ struct VertexMesh : VertexBuffer {
       normals[i+7] = normal[1];
       normals[i+8] = normal[2];
     }
-    VertexBuffer::Init(grid, grid + w * h * 18, GL_TRIANGLES);
-    normalsBuffer = VertexBuffer::AddBuffer(1, normals, normals + w * h * 18);
+
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vertexBuffer); 
+    glGenBuffers(1, &normalBuffer); 
+
+    glBindVertexArray(vao);
+
+    // Activate attributes 0 and 1
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+
+    // Mont thhe vertex buffer
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+    //Send vertices to GPU
+    glBufferData(GL_ARRAY_BUFFER, vertexCount * sizeof(float), grid, GL_STATIC_DRAW);
+    // Connect the mounted vertex buffer to attribute 0
+    glVertexAttribPointer(
+        0, //atrib index
+        3, // elements per vertex
+        GL_FLOAT,
+        GL_FALSE, // normalized
+        0,
+        (void*)(sizeof(float) * 0));
+    
+    // Mont thhe normal buffer
+    glBindBuffer(GL_ARRAY_BUFFER, normalBuffer);
+    //Send vertices to GPU
+    glBufferData(GL_ARRAY_BUFFER, vertexCount * sizeof(float), normals, GL_STATIC_DRAW);
+    // Connect the mounted normal buffer to attribute 1
+    glVertexAttribPointer(
+        1, //atrib index
+        3, // elements per normal
+        GL_FLOAT,
+        GL_FALSE, // normalized
+        0,
+        (void*)(sizeof(float) * 0));
+
     free(grid);
     free(normals);
     free(height);

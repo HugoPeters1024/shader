@@ -16,7 +16,6 @@ void loop(GLFWwindow* window);
 
 DefaultShader shader;
 ComputeShader worker;
-VertexBuffer quad;
 VertexMesh mesh;
 
 float vertices[] = {
@@ -65,7 +64,6 @@ int main() {
   //Setup shaders and vertex buffers
   shader.Init();
   //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-  quad.Init(std::begin(vertices), std::end(vertices), GL_TRIANGLES);
   mesh.Init(32, 32);
 
   worker.Init();
