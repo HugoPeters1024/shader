@@ -26,7 +26,7 @@ struct Program {
     glUseProgram(program); 
   }
 
-protected:
+public:
   static GLuint CompileShader(GLint type, const GLchar* const* source)
   {
     GLuint shader = glCreateShader(type);
@@ -59,19 +59,21 @@ protected:
 struct DefaultShader : Program {
   static const char* vs;
   static const char* fs;
-  GLint vPos;
-  GLint MVP;
+  GLint vPos, vNormal, MVP, iTime;
 
   DefaultShader() : Program() {}
   void Init() {
     Program::Init(&vs, &fs);
     vPos = glGetAttribLocation(program, "vPos");
+    vNormal = glGetAttribLocation(program, "vNormal");
     MVP  = glGetUniformLocation(program, "MVP");
+    iTime  = glGetUniformLocation(program, "iTime");
   }
 
   void Bind(mat4x4 M) {
     Program::Bind();
     glUniformMatrix4fv(MVP, 1, GL_FALSE, (const GLfloat*) M);
+    glUniform1f(iTime, glfwGetTime());
   }
 };
 
@@ -81,11 +83,12 @@ layout(location = 0) in vec3 vPos;
 layout(location = 1) in vec3 vNormal;
 out vec3 fColor;
 uniform mat4 MVP; 
+uniform float iTime;
 void main() {
    vec3 lightDir = vec3(1, 0, 0);
    vec3 normal = (MVP * vec4(vNormal, 1)).xyz;
-   float theta = abs(dot(normal, lightDir));
-   gl_Position = 0.00001f * MVP * vec4(vPos, 1.0);
+   float theta = max(dot(normal, lightDir),0);
+   gl_Position =  MVP * vec4(vPos, 1.0);
    fColor = vec3(1) * (theta + 0.2f);
 })";
 
@@ -96,3 +99,90 @@ out vec3 color;
 void main(){
   color = fColor;
 })";
+
+struct ComputeShader {
+  bool initialized;
+  GLuint program;
+  GLuint compute_shader;
+  GLuint input_buffer;
+  GLuint output_buffer;
+  static const char* src;
+
+  ComputeShader() {}
+  void Init() {
+    program = glCreateProgram();
+    compute_shader = Program::CompileShader(GL_COMPUTE_SHADER, &src);
+    glAttachShader(program, compute_shader);
+    glLinkProgram(program);
+
+
+    // Generate input buffer
+    glGenBuffers(1, &input_buffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, input_buffer);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, 64 * sizeof(float), NULL, GL_STATIC_DRAW);
+
+    // Map input buffer and fill it
+    GLint bufMask = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT; 
+    float* data = (float*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, 64 * sizeof(float), bufMask);
+
+    for(int i=0; i<64; i++)
+    {
+      data[i] = (float)i;
+    }
+    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+
+
+    // Generate outpt buffer and allocate size
+    glGenBuffers(1, &output_buffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, output_buffer);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, 64 * sizeof(float), NULL, GL_STATIC_DRAW);
+  }
+
+  void Run() { 
+    // Match buffer objects to shader mounts
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, input_buffer);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, output_buffer);
+
+    glUseProgram(program); 
+    // The shader uses an 8x8 group, so only one is required.
+    glDispatchCompute(1, 1, 1);
+    
+    // Ensure all writes of previous shader have completed
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+    // Mount the output buffer and print it
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, output_buffer);
+    float* data = (float*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+
+    for(int i=0; i<64; i++)
+    {
+      printf("data[%i]: %f\n", i, data[i]);
+    }
+    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+
+    GLint success = glGetError();
+    printf("ERROR CODE: %i\n", success);
+  }
+};
+
+const char* ComputeShader::src = R"(
+# version 430 core
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(std430, binding=4) buffer inBuf
+{
+  vec4 input_data[];
+};
+
+layout(std430, binding=5) buffer outBuf
+{
+  vec4 output_data[];
+};
+
+void main() {
+  uint pos = gl_GlobalInvocationID.x + 8 * gl_GlobalInvocationID.y;
+  output_data[pos].x = gl_GlobalInvocationID.x / 8.0f;
+  output_data[pos].y = gl_GlobalInvocationID.y / 8.0f;
+  output_data[pos].z = 0;
+  output_data[pos].w = -1;
+}
+)";

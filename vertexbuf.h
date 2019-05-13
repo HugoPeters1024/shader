@@ -30,12 +30,11 @@ struct VertexBuffer {
     initialized = true;
   }
 
-  void AddBuffer(GLint attrib, float* buf_begin, float* buf_end) {
+  int AddBuffer(GLint attrib, float* buf_begin, float* buf_end) {
     GLuint buf;
     size_t size = buf_end - buf_begin;
     if (size != buf_size)
       printf("Secondary buffer not the same as vertex buffer: %i/%i\n", size, buf_size);
-
     glGenBuffers(1, &buf);
     glBindBuffer(GL_ARRAY_BUFFER, buf);
     glBufferData(GL_ARRAY_BUFFER, size * sizeof(float), buf_begin, GL_STATIC_DRAW);
@@ -60,42 +59,47 @@ struct VertexBuffer {
 struct VertexMesh : VertexBuffer {
   uint w, h;
   VertexMesh() : VertexBuffer() {}
+  GLuint normalsBuffer;
 
   void Init(uint w, uint h) {
     float* grid = (float*)malloc(sizeof(float) * w * h * 18);
     float* normals = (float*)malloc(sizeof(float) * w * h * 18);
+    float* height = (float*)malloc(sizeof(float) * (w+1) * (h+1));
+    for(int i=0; i<(w+1)*(h+1); i++) {
+      height[i] = static_cast<float> (rand()) / static_cast<float>(RAND_MAX) * 0.1f;
+    }
     int q = 0;
+    float scalex = (float)w / 2.0f;
+    float scaley = (float)h / 2.0f;
     for(int y=0; y<h; y++)
       for(int x=0; x<w; x++) {
-        grid[q+0] = x/4.0f - 1;
-        grid[q+1] = y/4.0f - 1;
-        grid[q+2] = 0;
+        grid[q+0] = x/scalex - 1;
+        grid[q+1] = y/scaley - 1;
+        grid[q+2] = height[x + y * h];
 
-        grid[q+3] = x/4.0f - 1;
-        grid[q+4] = (y+1)/4.0f - 1;
-        grid[q+5] = 0;
+        grid[q+3] = x/scalex - 1;
+        grid[q+4] = (y+1)/scaley - 1;
+        grid[q+5] = height[x + (y+1) * h];
 
-        grid[q+6] = (x+1)/4.0f - 1;
-        grid[q+7] = y/4.0f - 1;
-        grid[q+8] = 0;
+        grid[q+6] = (x+1)/scalex - 1;
+        grid[q+7] = y/scaley- 1;
+        grid[q+8] = height[(x+1) + y * h];
 
-        grid[q+9] = (x+1)/4.0f - 1;
-        grid[q+10] = y/4.0f - 1;
-        grid[q+11] = 0;
+        grid[q+9] = (x+1)/scalex - 1;
+        grid[q+10] = y/scaley - 1;
+        grid[q+11] = height[(x+1) + y * h];
 
-        grid[q+12] = x/4.0f - 1;
-        grid[q+13] = (y+1)/4.0f - 1;
-        grid[q+14] = 0;
+        grid[q+12] = x/scalex - 1;
+        grid[q+13] = (y+1)/scaley - 1;
+        grid[q+14] = height[x + (y+1) * h];
 
-        grid[q+15] = (x+1)/4.0f - 1;
-        grid[q+16] = (y+1)/4.0f - 1;
-        grid[q+17] = 0;
+        grid[q+15] = (x+1)/scalex - 1;
+        grid[q+16] = (y+1)/scaley - 1;
+        grid[q+17] = height[(x+1) + (y+1) * h];
         q+=18;
       }
 
     for(int i=0; i<w*h*18; i+=9) {
-      //vec3 p1 = VEC3(grid[i+0], grid[i+1], grid[i+2]);
-      //vec3 p1 = VEC3(grid[i+0], grid[i+1], grid[i+2]);
       vec3 p1 = { grid[i+0], grid[i+1], grid[i+2] }; 
       vec3 p2 = { grid[i+3], grid[i+4], grid[i+5] }; 
       vec3 p3 = { grid[i+6], grid[i+7], grid[i+8] }; 
@@ -119,8 +123,9 @@ struct VertexMesh : VertexBuffer {
       normals[i+8] = normal[2];
     }
     VertexBuffer::Init(grid, grid + w * h * 18, GL_TRIANGLES);
-    VertexBuffer::AddBuffer(1, normals, normals + w * h * 18);
+    normalsBuffer = VertexBuffer::AddBuffer(1, normals, normals + w * h * 18);
     free(grid);
     free(normals);
+    free(height);
   }
 };

@@ -15,6 +15,7 @@ void error_callback(int error, const char* description)
 void loop(GLFWwindow* window);
 
 DefaultShader shader;
+ComputeShader worker;
 VertexBuffer quad;
 VertexMesh mesh;
 
@@ -29,13 +30,15 @@ float vertices[] = {
 };
 
 int main() {
-  printf("Hello World\n");
   if (!glfwInit()) return -2;
   glfwSetErrorCallback(error_callback);
 
-  // Ensure OpenGL 3
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+
+  // Ensure OpenGL 4
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
+
+
 
   // Create window
   GLFWwindow* window = glfwCreateWindow(640, 480, "Roiboi", NULL, NULL);
@@ -47,6 +50,15 @@ int main() {
   //Bind the window
   glfwMakeContextCurrent(window);
 
+  // Print info
+  const GLubyte* vendor = glGetString(GL_VENDOR);
+  printf("Video card:\t%s\n", vendor);
+  const GLubyte* renderer = glGetString(GL_RENDERER);
+  printf("Renderer:\t%s\n", renderer);
+  const GLubyte* version = glGetString(GL_VERSION);
+  printf("OpenGL version:\t%s\n", version);
+  printf("------------\n");
+
   //Enable vsync
   glfwSwapInterval(1);
 
@@ -54,7 +66,10 @@ int main() {
   shader.Init();
   //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   quad.Init(std::begin(vertices), std::end(vertices), GL_TRIANGLES);
-  mesh.Init(8, 8);
+  mesh.Init(32, 32);
+
+  worker.Init();
+  worker.Run();
 
 
 
@@ -76,20 +91,22 @@ void loop(GLFWwindow* window) {
   int width, height;
   mat4x4 m, p, t, s, mvp;
 
+
   glfwGetFramebufferSize(window, &width, &height);
   ratio = width / (float)height;
 
   glViewport(0, 0, width, height);
   glClear(GL_COLOR_BUFFER_BIT);
+  //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
   mat4x4_identity(m);
-  mat4x4_rotate_Y(m, m, (float)glfwGetTime() / 4.0f);
+  mat4x4_rotate_X(m, m, 2.2f);
+  mat4x4_rotate_Z(m, m, glfwGetTime());
   mat4x4_ortho(p, -ratio, ratio, -1.0f, 1.0f, 1.0f, -1.0f);
-  mat4x4_translate(t, 0, 0, -0.5f);
+  mat4x4_translate(t, 0, 0, 0);
 
   mat4x4_mul(mvp, p, m);
   mat4x4_mul(mvp, t, mvp);
   shader.Bind(mvp);
-  //quad.Draw();
   mesh.Draw();
 }
