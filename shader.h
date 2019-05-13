@@ -1,78 +1,59 @@
 #include <stdexcept>
 
-struct Program {
-  GLuint vertex_shader;
-  GLuint fragment_shader;
-  GLuint program;
-  bool initialized;
+inline static GLuint CompileShader(GLint type, const GLchar* const* source)
+{
+  GLuint shader = glCreateShader(type);
+  glShaderSource(shader, 1, source, NULL);
+  glCompileShader(shader);
 
-  Program() {}
-  void Init(const GLchar* const* vs, const GLchar* const* fs)
+  // Check the compilation of the shader 
+  GLint success = 0;
+  glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+  printf("Shader Compilation:\t\t");
+  if (success) printf("success\n"); else printf("failed\n");
+  if (success == GL_FALSE)
   {
-    vertex_shader = Program::CompileShader(GL_VERTEX_SHADER, vs);
-    fragment_shader = Program::CompileShader(GL_FRAGMENT_SHADER, fs);
+    GLint maxLength = 0;
+    glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
+
+    GLchar* errorLog = (GLchar*)malloc(maxLength);
+    glGetShaderInfoLog(shader, maxLength, &maxLength, errorLog);
+
+    printf("%s", errorLog);
+
+    free(errorLog);
+    return -1;
+  }
+
+  return shader;
+};
+
+struct DefaultShader {
+  static const char* vs;
+  static const char* fs;
+  GLint vPos, vNormal, MVP, iTime;
+  GLuint vertex_shader, fragment_shader;
+  GLuint program;
+
+  DefaultShader() {}
+  void Init() {
+    vertex_shader = CompileShader(GL_VERTEX_SHADER, &vs);
+    fragment_shader = CompileShader(GL_FRAGMENT_SHADER, &fs);
 
     program = glCreateProgram();
     glAttachShader(program, vertex_shader);
     glAttachShader(program, fragment_shader);
     glLinkProgram(program);
 
-    initialized = true;
-  }
-
-  void Bind() { 
-    if (!initialized) 
-      throw std::invalid_argument("Initialize program first.");
-    glUseProgram(program); 
-  }
-
-public:
-  static GLuint CompileShader(GLint type, const GLchar* const* source)
-  {
-    GLuint shader = glCreateShader(type);
-    glShaderSource(shader, 1, source, NULL);
-    glCompileShader(shader);
-
-    // Check the compilation of the shader 
-    GLint success = 0;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    printf("Shader Compilation:\t\t");
-    if (success) printf("success\n"); else printf("failed\n");
-    if (success == GL_FALSE)
-    {
-      GLint maxLength = 0;
-      glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
-
-      GLchar* errorLog = (GLchar*)malloc(maxLength);
-      glGetShaderInfoLog(shader, maxLength, &maxLength, errorLog);
-
-      printf("%s", errorLog);
-
-      free(errorLog);
-      return -1;
-    }
-
-    return shader;
-  }
-};
-
-struct DefaultShader : Program {
-  static const char* vs;
-  static const char* fs;
-  GLint vPos, vNormal, MVP, iTime;
-
-  DefaultShader() : Program() {}
-  void Init() {
-    Program::Init(&vs, &fs);
     vPos = glGetAttribLocation(program, "vPos");
     vNormal = glGetAttribLocation(program, "vNormal");
     MVP  = glGetUniformLocation(program, "MVP");
     iTime  = glGetUniformLocation(program, "iTime");
   }
 
-  void Bind(mat4x4 M) {
-    Program::Bind();
-    glUniformMatrix4fv(MVP, 1, GL_FALSE, (const GLfloat*) M);
+  void Bind(mat4x4 mvp) {
+    glUseProgram(program);
+    glUniformMatrix4fv(MVP, 1, GL_FALSE, (const GLfloat*) mvp);
     glUniform1f(iTime, glfwGetTime());
   }
 };
@@ -111,7 +92,7 @@ struct ComputeShader {
   ComputeShader() {}
   void Init() {
     program = glCreateProgram();
-    compute_shader = Program::CompileShader(GL_COMPUTE_SHADER, &src);
+    compute_shader = CompileShader(GL_COMPUTE_SHADER, &src);
     glAttachShader(program, compute_shader);
     glLinkProgram(program);
 

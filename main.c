@@ -91,13 +91,8 @@ void loop(GLFWwindow* window) {
   int width, height;
   mat4x4 m, p, t, s, mvp;
 
-
   glfwGetFramebufferSize(window, &width, &height);
   ratio = width / (float)height;
-
-  glViewport(0, 0, width, height);
-  glClear(GL_COLOR_BUFFER_BIT);
-  //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
   mat4x4_identity(m);
   mat4x4_rotate_X(m, m, 2.2f);
@@ -107,6 +102,11 @@ void loop(GLFWwindow* window) {
 
   mat4x4_mul(mvp, p, m);
   mat4x4_mul(mvp, t, mvp);
+
+  glViewport(0, 0, width, height);
+  glClear(GL_COLOR_BUFFER_BIT);
+  //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
   shader.Bind(mvp);
   mesh.Draw();
 }
