@@ -7,13 +7,19 @@ struct VertexMesh {
   GLuint vertexBuffer;
   GLuint normalBuffer;
   GLuint vao;
+  ComputeShader worker;
+  DefaultShader shader;
 
-  void Draw() {
+  void Draw(mat4x4 mvp) {
+    worker.Run();
+    shader.Bind(mvp);
     glBindVertexArray(vao);
     glDrawArrays(GL_TRIANGLES, 0, vertexCount);
   }
 
   void Init(uint w, uint h) {
+    shader.Init();
+    worker.Init();
     vertexCount = w * h * 18;
     float* grid = (float*)malloc(sizeof(float) * vertexCount);
     float* normals = (float*)malloc(sizeof(float) * vertexCount);
@@ -86,29 +92,29 @@ struct VertexMesh {
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
 
-    // Mont thhe vertex buffer
+    // Mount the vertex buffer
     glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
     //Send vertices to GPU
     glBufferData(GL_ARRAY_BUFFER, vertexCount * sizeof(float), grid, GL_STATIC_DRAW);
     // Connect the mounted vertex buffer to attribute 0
     glVertexAttribPointer(
-        0, //atrib index
+        shader.vPos, //atrib index
         3, // elements per vertex
         GL_FLOAT,
         GL_FALSE, // normalized
         0,
         (void*)(sizeof(float) * 0));
     
-    // Mont thhe normal buffer
+    // Mount thhe normal buffer
     glBindBuffer(GL_ARRAY_BUFFER, normalBuffer);
-    //Send vertices to GPU
+    // Send vertices to GPU
     glBufferData(GL_ARRAY_BUFFER, vertexCount * sizeof(float), normals, GL_STATIC_DRAW);
     // Connect the mounted normal buffer to attribute 1
     glVertexAttribPointer(
-        1, //atrib index
+        shader.vNormal, //atrib index
         3, // elements per normal
         GL_FLOAT,
-        GL_FALSE, // normalized
+        GL_TRUE, // normalized
         0,
         (void*)(sizeof(float) * 0));
 

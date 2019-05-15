@@ -14,7 +14,6 @@ void error_callback(int error, const char* description)
 
 void loop(GLFWwindow* window);
 
-DefaultShader shader;
 ComputeShader worker;
 VertexMesh mesh;
 
@@ -32,12 +31,9 @@ int main() {
   if (!glfwInit()) return -2;
   glfwSetErrorCallback(error_callback);
 
-
   // Ensure OpenGL 4
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
-
-
 
   // Create window
   GLFWwindow* window = glfwCreateWindow(640, 480, "Roiboi", NULL, NULL);
@@ -61,15 +57,8 @@ int main() {
   //Enable vsync
   glfwSwapInterval(1);
 
-  //Setup shaders and vertex buffers
-  shader.Init();
   //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   mesh.Init(32, 32);
-
-  worker.Init();
-  worker.Run();
-
-
 
   while(!glfwWindowShouldClose(window)) 
   {
@@ -105,6 +94,5 @@ void loop(GLFWwindow* window) {
   glClear(GL_COLOR_BUFFER_BIT);
   //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-  shader.Bind(mvp);
-  mesh.Draw();
+  mesh.Draw(mvp);
 }

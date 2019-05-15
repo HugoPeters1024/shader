@@ -161,9 +161,6 @@ layout(std430, binding=5) buffer outBuf
 
 void main() {
   uint pos = gl_GlobalInvocationID.x + 8 * gl_GlobalInvocationID.y;
-  output_data[pos].x = gl_GlobalInvocationID.x / 8.0f;
-  output_data[pos].y = gl_GlobalInvocationID.y / 8.0f;
-  output_data[pos].z = 0;
-  output_data[pos].w = -1;
+  output_data[pos] = -input_data[pos];
 }
 )";
