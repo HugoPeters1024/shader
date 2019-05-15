@@ -11,15 +11,14 @@ struct VertexMesh {
   DefaultShader shader;
 
   void Draw(mat4x4 mvp) {
+    glBindVertexArray(vao);
     worker.Run();
     shader.Bind(mvp);
-    glBindVertexArray(vao);
     glDrawArrays(GL_TRIANGLES, 0, vertexCount);
   }
 
   void Init(uint w, uint h) {
     shader.Init();
-    worker.Init();
     vertexCount = w * h * 18;
     float* grid = (float*)malloc(sizeof(float) * vertexCount);
     float* normals = (float*)malloc(sizeof(float) * vertexCount);
@@ -102,7 +101,7 @@ struct VertexMesh {
         3, // elements per vertex
         GL_FLOAT,
         GL_FALSE, // normalized
-        0,
+        0, // bytes padding per vertex
         (void*)(sizeof(float) * 0));
     
     // Mount thhe normal buffer
@@ -115,11 +114,13 @@ struct VertexMesh {
         3, // elements per normal
         GL_FLOAT,
         GL_TRUE, // normalized
-        0,
+        0, // bytes padding per normal
         (void*)(sizeof(float) * 0));
 
     free(grid);
     free(normals);
     free(height);
+
+    worker.Init(vertexBuffer, normalBuffer, vertexCount * sizeof(float));
   }
 };

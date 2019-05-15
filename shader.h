@@ -87,10 +87,16 @@ struct ComputeShader {
   GLuint compute_shader;
   GLuint input_buffer;
   GLuint output_buffer;
+  GLuint source;
+  GLuint target;
+  size_t buf_size;
   static const char* src;
 
   ComputeShader() {}
-  void Init() {
+  void Init(GLuint source, GLuint target, size_t buf_size) {
+    this->source = source;
+    this->target = target;
+    this->buf_size = buf_size;
     program = glCreateProgram();
     compute_shader = CompileShader(GL_COMPUTE_SHADER, &src);
     glAttachShader(program, compute_shader);
@@ -100,46 +106,63 @@ struct ComputeShader {
     // Generate input buffer
     glGenBuffers(1, &input_buffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, input_buffer);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, 64 * sizeof(float), NULL, GL_STATIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, buf_size, NULL, GL_STATIC_DRAW);
 
     // Map input buffer and fill it
+    /*
     GLint bufMask = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT; 
-    float* data = (float*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, 64 * sizeof(float), bufMask);
+    float* data = (float*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, buf_size, bufMask);
 
     for(int i=0; i<64; i++)
     {
-      data[i] = (float)i;
+      //data[i] = (float)i;
+      data[i] = -429;
     }
     glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+    */
 
 
     // Generate outpt buffer and allocate size
     glGenBuffers(1, &output_buffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, output_buffer);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, 64 * sizeof(float), NULL, GL_STATIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, buf_size, NULL, GL_STATIC_DRAW);
   }
 
   void Run() { 
+    printf("source buffer ID: %i\n", source);
+    printf("target buffer ID: %i\n", target);
+
+    // Copy source data to the shader data
+    glCopyNamedBufferSubData(source, input_buffer, 0, 0, buf_size);
+
     // Match buffer objects to shader mounts
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, input_buffer);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, output_buffer);
 
     glUseProgram(program); 
     // The shader uses an 8x8 group, so only one is required.
-    glDispatchCompute(1, 1, 1);
+    glDispatchCompute(buf_size / sizeof(vec3), 1, 1);
     
-    // Ensure all writes of previous shader have completed
+    // Ensure all writes of previous shaders have completed
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
-    // Mount the output buffer and print it
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, output_buffer);
-    float* data = (float*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+    // Copy result back to output buffer
+    glCopyNamedBufferSubData(output_buffer, target, 0, 0, buf_size);
 
-    for(int i=0; i<64; i++)
+    // Mount the result buffer and print it
+    glBindBuffer(GL_ARRAY_BUFFER, output_buffer);
+    vec3* data = (vec3*)glMapBuffer(GL_ARRAY_BUFFER , GL_READ_ONLY);
+    if ((unsigned long)data == 0)
     {
-      printf("data[%i]: %f\n", i, data[i]);
+      printf("Got null pointer\n");
+     // abort();
     }
-    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+
+    for(int i=0; i<buf_size / (3 * sizeof(float)); i++)
+    {
+      printf("data[%i]: (%f, %f, %f)\n", i, data[i][0], data[i][1], data[i][2]);
+    }
+    glUnmapBuffer(GL_ARRAY_BUFFER);
 
     GLint success = glGetError();
     printf("ERROR CODE: %i\n", success);
@@ -148,7 +171,7 @@ struct ComputeShader {
 
 const char* ComputeShader::src = R"(
 # version 430 core
-layout(local_size_x = 8, local_size_y = 8) in;
+layout(local_size_x = 1, local_size_y = 1) in;
 layout(std430, binding=4) buffer inBuf
 {
   vec4 input_data[];
@@ -160,7 +183,7 @@ layout(std430, binding=5) buffer outBuf
 };
 
 void main() {
-  uint pos = gl_GlobalInvocationID.x + 8 * gl_GlobalInvocationID.y;
-  output_data[pos] = -input_data[pos];
+  uint pos = gl_GlobalInvocationID.x;
+  output_data[pos].x = input_data[pos].x;//-input_data[pos];
 }
 )";
