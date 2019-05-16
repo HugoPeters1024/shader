@@ -60,23 +60,24 @@ struct DefaultShader {
 
 const char* DefaultShader::vs = R"(
 #version 330 core
-layout(location = 0) in vec3 vPos;
-layout(location = 1) in vec3 vNormal;
-out vec3 fColor;
+layout(location = 0) in vec4 vPos;
+layout(location = 1) in vec4 vNormal;
+out vec4 fColor;
 uniform mat4 MVP; 
 uniform float iTime;
 void main() {
    vec3 lightDir = vec3(1, 0, 0);
-   vec3 normal = (MVP * vec4(vNormal, 1)).xyz;
-   float theta = max(dot(normal, lightDir),0);
-   gl_Position =  MVP * vec4(vPos, 1.0);
-   fColor = vec3(1) * (theta + 0.2f);
+   vec4 normal = MVP * vNormal;
+   float theta = max(dot(normal.xyz, lightDir),0);
+   gl_Position =  vec4((MVP * vPos).xyz, 1);
+   fColor = vec4(1) * (theta + 0.2f);
+   fColor = vNormal;
 })";
 
 const char* DefaultShader::fs = R"(
 #version 330 core
-in vec3 fColor;
-out vec3 color;
+in vec4 fColor;
+out vec4 color;
 void main(){
   color = fColor;
 })";
@@ -151,16 +152,16 @@ struct ComputeShader {
 
     // Mount the result buffer and print it
     glBindBuffer(GL_ARRAY_BUFFER, output_buffer);
-    vec3* data = (vec3*)glMapBuffer(GL_ARRAY_BUFFER , GL_READ_ONLY);
+    vec4* data = (vec4*)glMapBuffer(GL_ARRAY_BUFFER , GL_READ_ONLY);
     if ((unsigned long)data == 0)
     {
       printf("Got null pointer\n");
      // abort();
     }
 
-    for(int i=0; i<buf_size / (3 * sizeof(float)); i++)
+    for(int i=0; i<buf_size / (4 * sizeof(float)); i++)
     {
-      printf("data[%i]: (%f, %f, %f)\n", i, data[i][0], data[i][1], data[i][2]);
+      printf("data[%i]: (%f, %f, %f, %f)\n", i, data[i][0], data[i][1], data[i][2], data[i][3]);
     }
     glUnmapBuffer(GL_ARRAY_BUFFER);
 
@@ -174,16 +175,16 @@ const char* ComputeShader::src = R"(
 layout(local_size_x = 1, local_size_y = 1) in;
 layout(std430, binding=4) buffer inBuf
 {
-  vec4 input_data[];
+  vec3 input_data[];
 };
 
 layout(std430, binding=5) buffer outBuf
 {
-  vec4 output_data[];
+  vec3 output_data[];
 };
 
 void main() {
   uint pos = gl_GlobalInvocationID.x;
-  output_data[pos].x = input_data[pos].x;//-input_data[pos];
+  output_data[pos] = input_data[pos];//-input_data[pos];
 }
 )";
