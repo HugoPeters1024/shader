@@ -58,7 +58,7 @@ int main() {
   glfwSwapInterval(1);
 
   //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-  mesh.Init(8, 8);
+  mesh.Init(80, 80);
 
   while(!glfwWindowShouldClose(window)) 
   {

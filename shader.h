@@ -1,5 +1,7 @@
 #include <stdexcept>
 
+#define WORK_GROUP_SIZE 8
+
 inline static GLuint CompileShader(GLint type, const GLchar* const* source)
 {
   GLuint shader = glCreateShader(type);
@@ -70,7 +72,8 @@ void main() {
    vec4 normal = MVP * vNormal;
    float theta = max(dot(normal.xyz, lightDir),0);
    gl_Position =  vec4((MVP * vPos).xyz, 1);
-   fColor = vec4(1) * (theta + 0.2f);
+   fColor = vec4(1) * (theta);
+   fColor += vec4(0.1f);
 })";
 
 const char* DefaultShader::fs = R"(
@@ -129,9 +132,6 @@ struct ComputeShader {
   }
 
   void Run() { 
-    printf("source buffer ID: %i\n", source);
-    printf("target buffer ID: %i\n", target);
-
     // Copy source data to the shader data
     glCopyNamedBufferSubData(source, input_buffer, 0, 0, buf_size);
 
@@ -142,7 +142,7 @@ struct ComputeShader {
     glUseProgram(program); 
     int job_count = buf_size / (sizeof(vec3) * 3);
 
-    glDispatchCompute(job_count, 1, 1);
+    glDispatchCompute(job_count / WORK_GROUP_SIZE, 1, 1);
     
     // Ensure all writes of previous shaders have completed
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -152,27 +152,12 @@ struct ComputeShader {
 
     // Mount the result buffer and print it
     glBindBuffer(GL_ARRAY_BUFFER, output_buffer);
-    vec4* data = (vec4*)glMapBuffer(GL_ARRAY_BUFFER , GL_READ_ONLY);
-    if ((unsigned long)data == 0)
-    {
-      printf("Got null pointer\n");
-     // abort();
-    }
-
-    for(int i=0; i<buf_size / (4 * sizeof(float)); i++)
-    {
-      //printf("data[%i]: (%f, %f, %f, %f)\n", i, data[i][0], data[i][1], data[i][2], data[i][3]);
-    }
-    glUnmapBuffer(GL_ARRAY_BUFFER);
-
-    GLint success = glGetError();
-    printf("ERROR CODE: %i\n", success);
   }
 };
 
 const char* ComputeShader::src = R"(
 # version 430 core
-layout(local_size_x = 1, local_size_y = 1) in;
+layout(local_size_x = 8, local_size_y = 1) in;
 layout(std430, binding=4) buffer inBuf
 {
   vec3 vertices[];
