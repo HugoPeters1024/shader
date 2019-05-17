@@ -71,7 +71,6 @@ void main() {
    float theta = max(dot(normal.xyz, lightDir),0);
    gl_Position =  vec4((MVP * vPos).xyz, 1);
    fColor = vec4(1) * (theta + 0.2f);
-   fColor = vNormal;
 })";
 
 const char* DefaultShader::fs = R"(
@@ -141,8 +140,9 @@ struct ComputeShader {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, output_buffer);
 
     glUseProgram(program); 
-    // The shader uses an 8x8 group, so only one is required.
-    glDispatchCompute(buf_size / sizeof(vec3), 1, 1);
+    int job_count = buf_size / (sizeof(vec3) * 3);
+
+    glDispatchCompute(job_count, 1, 1);
     
     // Ensure all writes of previous shaders have completed
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -161,7 +161,7 @@ struct ComputeShader {
 
     for(int i=0; i<buf_size / (4 * sizeof(float)); i++)
     {
-      printf("data[%i]: (%f, %f, %f, %f)\n", i, data[i][0], data[i][1], data[i][2], data[i][3]);
+      //printf("data[%i]: (%f, %f, %f, %f)\n", i, data[i][0], data[i][1], data[i][2], data[i][3]);
     }
     glUnmapBuffer(GL_ARRAY_BUFFER);
 
@@ -175,16 +175,26 @@ const char* ComputeShader::src = R"(
 layout(local_size_x = 1, local_size_y = 1) in;
 layout(std430, binding=4) buffer inBuf
 {
-  vec3 input_data[];
+  vec3 vertices[];
 };
 
 layout(std430, binding=5) buffer outBuf
 {
-  vec3 output_data[];
+  vec3 normals[];
 };
 
 void main() {
-  uint pos = gl_GlobalInvocationID.x;
-  output_data[pos] = input_data[pos];//-input_data[pos];
+  uint pos = gl_GlobalInvocationID.x * 3;
+  vec3 p1 = vertices[pos + 0];
+  vec3 p2 = vertices[pos + 1];
+  vec3 p3 = vertices[pos + 2];
+
+  vec3 v1 = p1 - p2;
+  vec3 v2 = p3 - p2;
+
+  vec3 n = normalize(cross(v1, v2));
+  normals[pos + 0] = n; 
+  normals[pos + 1] = n; 
+  normals[pos + 2] = n; 
 }
 )";
