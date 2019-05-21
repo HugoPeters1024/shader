@@ -10,10 +10,10 @@ struct VertexMesh {
   ComputeShader worker;
   DefaultShader shader;
 
-  void Draw(mat4x4 mvp) {
-    glBindVertexArray(vao);
+  void Draw(mat4x4 mvp, float time_correction) {
     worker.Run();
-    shader.Bind(mvp);
+    shader.Bind(mvp, time_correction);
+    glBindVertexArray(vao);
     glDrawArrays(GL_TRIANGLES, 0, vertexCount);
   }
 
@@ -24,7 +24,7 @@ struct VertexMesh {
     float* normals = (float*)malloc(sizeof(float) * vertexCount);
     float* height = (float*)malloc(sizeof(float) * (w+1) * (h+1));
     for(int i=0; i<(w+1)*(h+1); i++) {
-      height[i] = static_cast<float> (rand()) / static_cast<float>(RAND_MAX) * 0.2f;
+      height[i] = static_cast<float> (rand()) / static_cast<float>(RAND_MAX) * 0.1f;
     }
     int q = 0;
     float scalex = (float)w / 2.0f;

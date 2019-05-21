@@ -53,10 +53,10 @@ struct DefaultShader {
     iTime  = glGetUniformLocation(program, "iTime");
   }
 
-  void Bind(mat4x4 mvp) {
+  void Bind(mat4x4 mvp, float time_correction) {
     glUseProgram(program);
     glUniformMatrix4fv(MVP, 1, GL_FALSE, (const GLfloat*) mvp);
-    glUniform1f(iTime, glfwGetTime());
+    glUniform1f(iTime, glfwGetTime() - time_correction);
   }
 };
 
@@ -68,11 +68,14 @@ out vec4 fColor;
 uniform mat4 MVP; 
 uniform float iTime;
 void main() {
-   vec3 lightDir = vec3(1, 0, 0);
+   vec4 lightPos = MVP * vec4(0, 0, 1, 1);
+   vec4 lightVec = lightPos - vPos;
+   vec4 lightDir = normalize(lightVec); 
+   float lightDis = dot(lightVec, lightVec);
    vec4 normal = MVP * vNormal;
-   float theta = max(dot(normal.xyz, lightDir),0);
+   float theta = max(dot(normal, lightDir),0);
    gl_Position =  vec4((MVP * vPos).xyz, 1);
-   fColor = vec4(1) * (theta);
+   fColor = vec4(1, cos(iTime), -sin(iTime), 1) * theta / (lightDis * lightDis);
    fColor += vec4(0.1f);
 })";
 
