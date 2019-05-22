@@ -135,3 +135,90 @@ struct VertexMesh {
     worker.Init(vertexBuffer, normalBuffer, vertexCount * sizeof(float));
   }
 };
+
+struct Quad {
+  GLuint vao, vbo, uvbo;
+  GLuint tex;
+  BareShader shader;
+  float vertices[18] = {
+    -1.0f,  -1.0f, 0.0f,
+    -1.0f,   1.0f, 0.0f,
+     1.0f,  -1.0f, 0.0f,
+
+     1.0f, -1.0f, 0.0f,
+    -1.0f,  1.0f, 0.0f,
+     1.0f,  1.0f, 0.0f,
+  };
+
+  float uv[12] = {
+    -1.0f,  -1.0f,
+    -1.0f,   1.0f,
+     1.0f,  -1.0f,
+
+     1.0f, -1.0f,
+    -1.0f,  1.0f,
+     1.0f,  1.0f,
+  };
+
+  Quad() { }
+  void Init() {
+    shader.Init();
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
+    glGenBuffers(1, &uvbo);
+
+    glBindVertexArray(vao);
+    glEnableVertexAttribArray(shader.vPos);
+    glEnableVertexAttribArray(shader.uvPos);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, 18*sizeof(float), vertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(
+        shader.vPos,
+        3,
+        GL_FLOAT,
+        GL_FALSE,
+        0,
+        (void*)(sizeof(float) * 0));
+
+    glBindBuffer(GL_ARRAY_BUFFER, uvbo);
+    glBufferData(GL_ARRAY_BUFFER, 12*sizeof(float), uv, GL_STATIC_DRAW);
+    glVertexAttribPointer(
+        shader.uvPos,
+        2,
+        GL_FLOAT,
+        GL_FALSE,
+        0,
+        (void*)(sizeof(float) * 0));
+
+    // Texutre section
+    int w = 894;
+    int h = 894;
+    int nrChannels = 3;
+    unsigned char* data = stbi_load("texture.jpg", &w, &h, &nrChannels, 0);
+
+    if (!data) {
+      printf("Failed to load texture in quad\n");
+    }
+
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    stbi_image_free(data);
+
+  }
+
+  void Draw() {
+    shader.Bind();
+    glBindVertexArray(vao);
+    glDrawArrays(GL_TRIANGLES, 0, 18);
+  }
+};

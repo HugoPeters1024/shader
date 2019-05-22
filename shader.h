@@ -30,6 +30,56 @@ inline static GLuint CompileShader(GLint type, const GLchar* const* source)
   return shader;
 };
 
+struct BareShader {
+  static const char* vs;
+  static const char* fs;
+  GLint vPos, uvPos;
+  GLuint vertex_shader, fragment_shader;
+  GLuint program;
+
+  BareShader() {}
+  void Init() {
+    vertex_shader = CompileShader(GL_VERTEX_SHADER, &vs);
+    fragment_shader = CompileShader(GL_FRAGMENT_SHADER, &fs);
+
+    program = glCreateProgram();
+    glAttachShader(program, vertex_shader);
+    glAttachShader(program, fragment_shader);
+    glLinkProgram(program);
+
+    vPos = glGetAttribLocation(program, "vPos");
+    uvPos = glGetAttribLocation(program, "uvPos");
+  }
+
+  void Bind() {
+    glUseProgram(program);
+  }
+};
+
+const char* BareShader::vs = R"(
+#version 330 core
+layout(location = 0) in vec3 vPos;
+layout(location = 0) in vec2 uvPos;
+
+out vec2 texCoord;
+
+void main() {
+   gl_Position = vec4(vPos, 1);
+   texCoord = uvPos;
+})";
+
+const char* BareShader::fs = R"(
+#version 330 core
+in vec2 texCoord;
+out vec4 color;
+
+uniform sampler2D tex;
+
+void main() {
+  vec2 sample = vec2(texCoord.x + 0.05f * sin(texCoord.x * 10), texCoord.y);
+  color = texture(tex, sample);
+})";
+
 struct DefaultShader {
   static const char* vs;
   static const char* fs;

@@ -8,11 +8,12 @@ app: main.c
 	  --remove-section=.note.gnu.gold-version \
 	  --remove-section=.comment \
 	  app
-	du -b app | awk '{ print  (65536 - $$1 )} $$1 > 65536 { exit 1 }'
+#	du -b app | awk '{ print  (65536 - $$1 )} $$1 > 65536 { exit 1 }'
 
 .PHONY: clean
 clean:
 	rm app 
 
 run:
-	make && ./app
+	make
+	./app

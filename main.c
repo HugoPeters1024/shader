@@ -4,7 +4,12 @@
 #define GL_GLEXT_PROTOTYPES 1
 #define GL3_PROTOTYPES 1
 #include <GLFW/glfw3.h>
+
 #include "linmath.h"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 #include "shader.h"
 #include "vertexbuf.h"
 
@@ -18,6 +23,7 @@ float time_correction = 0.0f;
 
 ComputeShader worker;
 VertexMesh mesh;
+Quad quad;
 
 float vertices[] = {
   -1.0f,  -1.0f, 1.0f,
@@ -64,6 +70,8 @@ int main() {
 
   //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   mesh.Init(20, 20);
+  quad.Init();
+
 
   while(!glfwWindowShouldClose(window)) 
   {
@@ -97,8 +105,9 @@ void loop(GLFWwindow* window) {
 
   glViewport(0, 0, width, height);
   glClear(GL_COLOR_BUFFER_BIT);
-  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
+  quad.Draw();
   mesh.Draw(mvp, time_correction);
 
   if (time_correction > 0) 
