@@ -140,6 +140,7 @@ struct Quad {
   GLuint vao, vbo, uvbo;
   GLuint tex;
   BareShader shader;
+  TextureComputeShader worker;
   float vertices[18] = {
     -1.0f,  -1.0f, 0.0f,
     -1.0f,   1.0f, 0.0f,
@@ -214,10 +215,13 @@ struct Quad {
 
     stbi_image_free(data);
 
+    worker.Init(tex, w, h);
   }
 
-  void Draw() {
+  void Draw(float time) {
+    worker.Run(time);
     shader.Bind();
+    glBindTexture(GL_TEXTURE_2D, worker.tex);
     glBindVertexArray(vao);
     glDrawArrays(GL_TRIANGLES, 0, 18);
   }

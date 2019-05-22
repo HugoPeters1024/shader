@@ -118,14 +118,14 @@ out vec4 fColor;
 uniform mat4 MVP; 
 uniform float iTime;
 void main() {
-   vec4 lightPos = MVP * vec4(0, 0, 1, 1);
+   vec4 lightPos = MVP * vec4(0, 0, 2, 1);
    vec4 lightVec = lightPos - vPos;
    vec4 lightDir = normalize(lightVec); 
    float lightDis = dot(lightVec, lightVec);
    vec4 normal = MVP * vNormal;
    float theta = max(dot(normal, lightDir),0);
    gl_Position =  vec4((MVP * vPos).xyz, 1);
-   fColor = vec4(1, cos(iTime), -sin(iTime), 1) * theta / (lightDis * lightDis);
+   fColor = 5 * vec4(1, cos(iTime), -sin(iTime), 1) * theta / (lightDis * lightDis);
    fColor += vec4(0.1f);
 })";
 
@@ -235,4 +235,85 @@ void main() {
   normals[pos + 1] = n; 
   normals[pos + 2] = n; 
 }
+)";
+
+struct TextureComputeShader {
+  static const char* src;
+  GLuint src_tex;
+  GLuint tex;
+  GLuint shader;
+  GLuint program;
+  GLuint w;
+  GLuint h;
+  GLint iTime;
+
+  void Init(GLuint src_tex, int w, int h) {
+    this->src_tex = src_tex;
+    this->w = w;
+    this->h = h;
+
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
+
+
+    glBindImageTexture(0, src_tex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGB);
+    glBindImageTexture(1, tex, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+
+    shader = CompileShader(GL_COMPUTE_SHADER, &src);
+    program = glCreateProgram();
+    glAttachShader(program, shader);
+    glLinkProgram(program);
+
+
+    iTime = glGetUniformLocation(program, "iTime");
+  }
+
+  void Run(float time) {
+    glUseProgram(program);
+    glUniform1f(iTime, time);
+    glDispatchCompute(w, h, 1);
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+  }
+};
+
+const char* TextureComputeShader::src = R"(
+  #version 430
+  layout(local_size_x = 1, local_size_y = 1) in;
+  layout(rgba32f, binding = 0) uniform image2D img_input;
+  layout(rgba32f, binding = 1) uniform image2D img_output;
+  uniform float iTime;
+
+  uint wang_hash(uint seed)
+  {
+    seed = (seed ^ 61) ^ (seed >> 16);
+    seed *= 9;
+    seed = seed ^ (seed >> 4);
+    seed *= 0x27d4eb2d;
+    seed = seed ^ (seed >> 15);
+    return seed;
+  }
+
+
+  float uintToFloat(uint seed) {
+    return seed * (1.0f / 4294967296.0f);
+  }
+
+  float randomf(uint seed) {
+    return uintToFloat(wang_hash(seed));
+  }
+
+  void main() {
+    ivec2 coords = ivec2(gl_GlobalInvocationID.xy);
+    float r = randomf(coords.x + coords.y * coords.y * 512 * uint(iTime * 1000 * iTime));
+    vec4 pixel = imageLoad(img_input, coords);
+    vec4 rv = vec4(r, r, r, 1);
+    imageStore(img_output, coords, pixel + rv / 1.0f);
+  }
 )";

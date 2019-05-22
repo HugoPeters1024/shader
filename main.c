@@ -21,7 +21,6 @@ void loop(GLFWwindow* window);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 float time_correction = 0.0f;
 
-ComputeShader worker;
 VertexMesh mesh;
 Quad quad;
 
@@ -41,7 +40,7 @@ int main() {
 
   // Ensure OpenGL 4
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
 
   // Create window
   GLFWwindow* window = glfwCreateWindow(640, 480, "Roiboi", NULL, NULL);
@@ -107,7 +106,7 @@ void loop(GLFWwindow* window) {
   glClear(GL_COLOR_BUFFER_BIT);
   //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-  quad.Draw();
+  quad.Draw(glfwGetTime());
   mesh.Draw(mvp, time_correction);
 
   if (time_correction > 0) 
