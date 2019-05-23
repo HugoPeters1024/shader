@@ -261,10 +261,8 @@ struct TextureComputeShader {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
 
-
-    glBindImageTexture(0, src_tex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGB);
-    glBindImageTexture(1, tex, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
+    //glBindImageTexture(0, src_tex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+    //glBindImageTexture(1, src_tex, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
     shader = CompileShader(GL_COMPUTE_SHADER, &src);
     program = glCreateProgram();
@@ -284,7 +282,7 @@ struct TextureComputeShader {
 };
 
 const char* TextureComputeShader::src = R"(
-  #version 430
+  #version 450 core
   layout(local_size_x = 1, local_size_y = 1) in;
   layout(rgba32f, binding = 0) uniform image2D img_input;
   layout(rgba32f, binding = 1) uniform image2D img_output;
@@ -314,6 +312,6 @@ const char* TextureComputeShader::src = R"(
     float r = randomf(coords.x + coords.y * coords.y * 512 * uint(iTime * 1000 * iTime));
     vec4 pixel = imageLoad(img_input, coords);
     vec4 rv = vec4(r, r, r, 1);
-    imageStore(img_output, coords, pixel + rv / 1.0f);
+    imageStore(img_output, coords, pixel + r);
   }
 )";
