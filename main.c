@@ -86,7 +86,7 @@ float vertices[] = {
    1.0f,  1.0f, 1.0f,
 };
 
-int main() {
+int main(int argc, char** argv) {
   if (!glfwInit()) return -2;
   glfwSetErrorCallback(error_callback);
 
@@ -130,6 +130,8 @@ int main() {
   mesh.Init(20, 20);
   quad.Init();
 
+  if (argc > 1) glfwSetWindowShouldClose(window, GLFW_TRUE);
+
 
   while(!glfwWindowShouldClose(window)) 
   {
@@ -138,6 +140,7 @@ int main() {
     glfwSwapBuffers(window);
   }
 
+  printf("Window was closed\n");
   glfwDestroyWindow(window);
   glfwTerminate();
   return 0;
@@ -166,7 +169,7 @@ void loop(GLFWwindow* window) {
   //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
   quad.Draw(glfwGetTime());
-  mesh.Draw(mvp, time_correction);
+//  mesh.Draw(mvp, time_correction);
 
   if (time_correction > 0) 
     time_correction -= 0.01f;

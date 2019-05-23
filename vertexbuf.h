@@ -192,21 +192,20 @@ struct Quad {
         0,
         (void*)(sizeof(float) * 0));
 
-    // Texutre section
+    // Texture section
     int w = 894;
     int h = 894;
     int nrChannels = 3;
-    unsigned char* raw_data = stbi_load("texture.jpg", &w, &h, &nrChannels, 0);
-    if (!raw_data) {
+    unsigned char* data = stbi_load("texture.jpg", &w, &h, &nrChannels, 0);
+    if (!data) {
       printf("Failed to load texture in quad\n");
     }
 
-    float* data = (float*)malloc(nrChannels*w*h*sizeof(float));
+    float* datax = (float*)malloc(nrChannels*w*h*sizeof(float));
 
     for(int i=0; i<nrChannels*w*h; i++) {
-      data[i] = (float)raw_data[i] / 256.0f;
+      datax[i] = data[i] / 256.0f; 
     }
-
 
     glGenTextures(1, &tex);
     glBindTexture(GL_TEXTURE_2D, tex);
@@ -216,18 +215,26 @@ struct Quad {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, w, h, 0, GL_RGB, GL_FLOAT, data);
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0, // mipmap level
+        GL_RGBA32F, //desired internal format
+        w, // width
+        h, // height
+        0, // legacy, must be 0
+        GL_RGB, // actual format
+        GL_FLOAT, // actual size
+        datax);
     glGenerateMipmap(GL_TEXTURE_2D);
 
-    stbi_image_free(raw_data);
-    free(data);
+    stbi_image_free(data);
     worker.Init(tex, w, h);
   }
 
   void Draw(float time) {
     worker.Run(time);
     shader.Bind();
-    glBindTexture(GL_TEXTURE_2D, tex);
+    glBindTexture(GL_TEXTURE_2D, worker.tex);
     glBindVertexArray(vao);
     glDrawArrays(GL_TRIANGLES, 0, 18);
   }

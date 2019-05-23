@@ -17,3 +17,7 @@ clean:
 run:
 	make
 	./app
+	
+run9:
+	make
+	./app 9

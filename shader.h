@@ -245,7 +245,7 @@ struct TextureComputeShader {
   GLuint program;
   GLuint w;
   GLuint h;
-  GLint iTime;
+  GLint iTime, iSize;
 
   void Init(GLuint src_tex, int w, int h) {
     this->src_tex = src_tex;
@@ -261,8 +261,8 @@ struct TextureComputeShader {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, w, h, 0, GL_RGBA, GL_FLOAT, NULL);
 
-    //glBindImageTexture(0, src_tex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-    //glBindImageTexture(1, src_tex, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+    glBindImageTexture(0, src_tex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+    glBindImageTexture(1, tex, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
     shader = CompileShader(GL_COMPUTE_SHADER, &src);
     program = glCreateProgram();
@@ -271,11 +271,13 @@ struct TextureComputeShader {
 
 
     iTime = glGetUniformLocation(program, "iTime");
+    iSize = glGetUniformLocation(program, "img_size");
   }
 
   void Run(float time) {
     glUseProgram(program);
     glUniform1f(iTime, time);
+    glUniform2i(iSize, w, h);
     glDispatchCompute(w, h, 1);
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
   }
@@ -287,10 +289,11 @@ const char* TextureComputeShader::src = R"(
   layout(rgba32f, binding = 0) uniform image2D img_input;
   layout(rgba32f, binding = 1) uniform image2D img_output;
   uniform float iTime;
+  uniform ivec2 img_size;
 
   uint wang_hash(uint seed)
   {
-    seed = (seed ^ 61) ^ (seed >> 16);
+    seed = (seed ^ 61u) ^ (seed >> 16);
     seed *= 9;
     seed = seed ^ (seed >> 4);
     seed *= 0x27d4eb2d;
@@ -308,10 +311,15 @@ const char* TextureComputeShader::src = R"(
   }
 
   void main() {
-    ivec2 coords = ivec2(gl_GlobalInvocationID.xy);
-    float r = randomf(coords.x + coords.y * coords.y * 512 * uint(iTime * 1000 * iTime));
-    vec4 pixel = imageLoad(img_input, coords);
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    float r = randomf(coord.x + coord.y * coord.y * 512 * uint(iTime * 1000 * iTime));
+    float abbx = sin(iTime) * 20;
+    float abby = cos(iTime) * 20;
+    vec4 pixelr = imageLoad(img_input, ivec2(coord.x, coord.y));
+    vec4 pixelg = imageLoad(img_input, ivec2(coord.x + abbx * 1, coord.y + abby));
+    vec4 pixelb = imageLoad(img_input, ivec2(coord.x + abbx * 2, coord.y + abby * 2));
+    vec4 pixel = vec4(pixelr.r, pixelg.g, pixelb.b, 1);
     vec4 rv = vec4(r, r, r, 1);
-    imageStore(img_output, coords, pixel + r);
+    imageStore(img_output, coord, pixel);
   }
 )";
